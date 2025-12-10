@@ -4,22 +4,22 @@ overview: Set up the ghstats Bun project skeleton with basic CLI routing, OpenTU
 todos:
   - id: init-bun
     content: Initialize Bun project with package.json, bunfig.toml, tsconfig.json
-    status: pending
+    status: completed
   - id: create-structure
     content: "Create directory structure: src/cli, src/tui, src/infra, src/types, bin"
-    status: pending
+    status: completed
   - id: cli-entrypoint
     content: Implement CLI entrypoint (index.ts) and router with commander
-    status: pending
+    status: completed
   - id: tui-hello
     content: Implement OpenTUI Hello World screen in tui/app.ts
-    status: pending
+    status: completed
   - id: github-client
     content: Implement GitHub client spike with getAuthenticatedUser()
-    status: pending
+    status: completed
   - id: bin-wrapper
     content: Create bin/ghstats executable wrapper
-    status: pending
+    status: completed
 ---
 
 # Phase 0: Skeleton & Spike
@@ -57,22 +57,22 @@ flowchart TB
     subgraph bin [bin/]
         ghstats[ghstats]
     end
-    
+
     subgraph src [src/]
         subgraph cli [cli/]
             cliIndex[index.ts]
             router[router.ts]
         end
-        
+
         subgraph tui [tui/]
             tuiApp[app.ts]
         end
-        
+
         subgraph infra [infra/]
             githubClient[githubClient.ts]
         end
     end
-    
+
     ghstats --> cliIndex
     cliIndex --> router
     router --> tuiApp
@@ -88,10 +88,13 @@ Create `package.json` with initial dependencies:
 - `@opentui/core` - TUI framework
 - `commander` - CLI argument parsing
 - `@octokit/rest` - GitHub REST API client
+- `date-fns` - Date utility library (for future stat bucketing)
 
 Create `bunfig.toml` for Bun configuration.
 
 Create `tsconfig.json` for TypeScript settings.
+
+Note: Testing uses `bun:test` (built-in, no extra dependency needed). Write tests with `import { test, expect } from "bun:test"`.
 
 ### 2. Create Project Directory Structure
 
@@ -145,9 +148,9 @@ This validates OpenTUI and Zig bindings work correctly.
 
 In `package.json`:
 
-- `dev` - Run with hot reload
-- `build` - Compile if needed
-- `start` - Run the CLI
+- `dev` - Run with hot reload: `bun run --hot src/cli/index.ts`
+- `test` - Run tests: `bun test`
+- `start` - Run the CLI: `bun run src/cli/index.ts`
 
 ## Deliverables
 
@@ -162,3 +165,6 @@ After Phase 0 completion:
 - The PRD mentions OpenTUI uses an imperative API from `@opentui/core`
 - Token is read from environment only (no config file storage in Phase 0)
 - No caching implemented in this phase
+- Testing uses Bun's native `bun:test` runner (Jest-compatible, no separate test framework needed)
+- All dependencies are native npm packages; Bun's package manager (`bun add`) installs them directly
+- Runtime is Bun only; do not fall back to npm/node
