@@ -10,6 +10,25 @@ export interface TimeRange {
   bucket: Bucket;
 }
 
+export interface TimePoint {
+  /** ISO date string at bucket start (UTC) */
+  date: string;
+  value: number;
+}
+
+export interface Timeline {
+  metric: TimelineMetric;
+  range: TimeRange;
+  points: TimePoint[];
+}
+
+export interface SummaryStats {
+  range: TimeRange;
+  commits: number;
+  prsOpened: number;
+  prsMerged: number;
+}
+
 export type TimelineMetric = "commits" | "prs" | "loc" | "activeDays";
 
 export interface GitHubUser {
