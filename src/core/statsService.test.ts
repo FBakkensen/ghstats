@@ -91,6 +91,53 @@ describe("statsService", () => {
     expect(summary.prsMerged).toBe(0);
   });
 
+  it("aggregates commits weekly when bucket=week", async () => {
+    const weeklyRange: TimeRange = {
+      from: new Date(Date.UTC(2023, 0, 1)),
+      to: new Date(Date.UTC(2023, 0, 15)),
+      bucket: "week",
+    };
+
+    const events = [
+      { type: "PushEvent" as const, created_at: "2023-01-02T12:00:00Z", payload: { size: 1 } },
+      { type: "PushEvent" as const, created_at: "2023-01-06T08:00:00Z", payload: { size: 2 } },
+      { type: "PushEvent" as const, created_at: "2023-01-12T08:00:00Z", payload: { size: 1 } },
+    ];
+
+    mockGetUserEventsInRange.mockResolvedValueOnce(events as any);
+    const { summary, timeline } = await getStats(weeklyRange);
+
+    expect(summary.commits).toBe(4);
+    expect(timeline.range.bucket).toBe("week");
+    expect(timeline.points.map((p) => p.date)).toEqual([
+      "2022-12-26",
+      "2023-01-02",
+      "2023-01-09",
+    ]);
+
+    const jan2Week = timeline.points.find((p) => p.date === "2023-01-02");
+    const jan9Week = timeline.points.find((p) => p.date === "2023-01-09");
+    expect(jan2Week?.value).toBe(3);
+    expect(jan9Week?.value).toBe(1);
+  });
+
+  it("counts PushEvent using distinct_size when commits are hidden", async () => {
+    const events = [
+      {
+        type: "PushEvent" as const,
+        created_at: "2023-01-02T12:00:00Z",
+        payload: { distinct_size: 5 },
+      },
+    ];
+
+    mockGetUserEventsInRange.mockResolvedValueOnce(events as any);
+    const { summary, timeline } = await getStats(range);
+
+    expect(summary.commits).toBe(5);
+    const day = timeline.points.find((p) => p.date === "2023-01-02");
+    expect(day?.value).toBe(5);
+  });
+
   it("propagates errors from the GitHub client", async () => {
     mockGetUserEventsInRange.mockRejectedValueOnce(new Error("boom"));
     await expect(getStats(range)).rejects.toThrow("boom");

@@ -1,7 +1,7 @@
-import { formatISO, startOfDay } from "date-fns";
-import { initDailyPoints } from "./bucketing";
+import { formatISO, startOfDay, startOfISOWeek } from "date-fns";
+import { initPoints } from "./bucketing";
 import { getAuthenticatedUser, getUserEventsInRange } from "../infra/githubClient";
-import type { SummaryStats, TimeRange, Timeline } from "../types/domain";
+import type { Bucket, SummaryStats, TimeRange, Timeline } from "../types/domain";
 
 export interface StatsBundle {
   username: string;
@@ -9,12 +9,14 @@ export interface StatsBundle {
   timeline: Timeline;
 }
 
-function dayKey(dateString: string): string {
-  const day = startOfDay(new Date(dateString));
-  return formatISO(day, { representation: "date" });
+function bucketKey(dateString: string, bucket: Bucket): string {
+  const date = new Date(dateString);
+  const bucketStart = bucket === "week" ? startOfISOWeek(date) : startOfDay(date);
+  return formatISO(bucketStart, { representation: "date" });
 }
 
 function countCommits(event: any): number {
+  if (typeof event?.payload?.distinct_size === "number") return event.payload.distinct_size;
   if (typeof event?.payload?.size === "number") return event.payload.size;
   if (Array.isArray(event?.payload?.commits)) return event.payload.commits.length;
   return 0;
@@ -24,7 +26,7 @@ export async function getStats(range: TimeRange): Promise<StatsBundle> {
   const username = await getAuthenticatedUser();
   const events = await getUserEventsInRange(username, range);
 
-  const points = initDailyPoints(range);
+  const points = initPoints(range);
   const pointIndex = new Map(points.map((p) => [p.date, p]));
 
   const summary: SummaryStats = {
@@ -35,7 +37,8 @@ export async function getStats(range: TimeRange): Promise<StatsBundle> {
   };
 
   for (const event of events) {
-    const key = dayKey(event.created_at);
+    if (!event.created_at) continue;
+    const key = bucketKey(event.created_at, range.bucket);
     switch (event.type) {
       case "PushEvent": {
         const count = countCommits(event);

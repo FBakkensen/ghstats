@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "bun:test";
-import { eachDay, initDailyPoints, parseRange } from "./bucketing";
+import {
+  eachDay,
+  eachWeek,
+  initDailyPoints,
+  initWeeklyPoints,
+  parseRange,
+} from "./bucketing";
 import type { TimeRange } from "../types/domain";
 
 const fixedRange: TimeRange = {
@@ -34,6 +40,13 @@ describe("bucketing", () => {
     expect(range.bucket).toBe("day");
   });
 
+  it("parses weekly preset ranges", () => {
+    const now = new Date(Date.UTC(2023, 0, 10));
+    const range = parseRange("7d", "week", now);
+    expect(range.bucket).toBe("week");
+    expect(range.to.toISOString().slice(0, 10)).toBe("2023-01-10");
+  });
+
   it("parses explicit ranges", () => {
     const range = parseRange("2023-01-05:2023-01-06", "day");
     expect(range.from.toISOString().slice(0, 10)).toBe("2023-01-05");
@@ -58,10 +71,40 @@ describe("bucketing", () => {
   });
 
   it("rejects unsupported buckets", () => {
-    expect(() => parseRange("7d", "week")).toThrow("Phase 1 only supports daily buckets");
+    expect(() => parseRange("7d", "month" as any)).toThrow("Unsupported bucket. Use day or week.");
   });
 
   it("rejects invalid formats", () => {
     expect(() => parseRange("bad", "day")).toThrow();
+  });
+
+  it("creates inclusive week list based on ISO weeks", () => {
+    const weeks = eachWeek({
+      from: new Date(Date.UTC(2023, 0, 1)),
+      to: new Date(Date.UTC(2023, 0, 20)),
+      bucket: "week",
+    });
+    expect(weeks.map((d) => d.toISOString().slice(0, 10))).toEqual([
+      "2022-12-26",
+      "2023-01-02",
+      "2023-01-09",
+      "2023-01-16",
+    ]);
+  });
+
+  it("initializes weekly points", () => {
+    const points = initWeeklyPoints({
+      from: new Date(Date.UTC(2023, 0, 1)),
+      to: new Date(Date.UTC(2023, 0, 20)),
+      bucket: "week",
+    });
+
+    expect(points.map((p) => p.date)).toEqual([
+      "2022-12-26",
+      "2023-01-02",
+      "2023-01-09",
+      "2023-01-16",
+    ]);
+    expect(points.every((p) => p.value === 0)).toBe(true);
   });
 });
